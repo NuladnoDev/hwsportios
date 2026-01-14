@@ -3,8 +3,13 @@ workflows:
     name: iOS Build (Unsigned)
     max_build_duration: 30
     instance_type: mac_mini_m1
+    # Мы УБРАЛИ секцию integrations, чтобы он не искал ключи Apple
+    publishing:
+      email:
+        recipients:
+          - helloacc223@outlook.com
     artifacts:
-      - build/ios/iphoneos/*.app
+      - build/ios/iphoneos/*.app.zip # Codemagic сам запакует .app в .zip
     scripts:
       - name: Initialize Xcode Project
         script: | 
@@ -19,7 +24,7 @@ workflows:
           "
       - name: Build Unsigned App
         script: |
-          # Собираем без подписи (CODE_SIGNING_ALLOWED=NO)
+          # Чистая сборка без подписи
           xcodebuild build \
             -project Treadmill.xcodeproj \
             -scheme Treadmill \
@@ -27,8 +32,10 @@ workflows:
             -configuration Release \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            CONFIGURATION_BUILD_DIR=build/Release-iphoneos
           
-          # Готовим папку для артефактов
+          # Создаем папку для результата
           mkdir -p build/ios/iphoneos
-          cp -R build/Release-iphoneos/Treadmill.app build/ios/iphoneos/Treadmill.app
+          # Упаковываем .app в zip, чтобы Codemagic его подхватил как артефакт
+          cd build/Release-iphoneos && zip -r ../ios/iphoneos/Treadmill.app.zip Treadmill.app
