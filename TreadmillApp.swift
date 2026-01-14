@@ -155,89 +155,104 @@ struct TimerView: View {
     @ObservedObject var manager: WorkoutManager
     
     var body: some View {
-        VStack(spacing: 20) {
-            // Кнопки управления сверху
+        ZStack(alignment: .top) {
+            // Контент таймера (центрированный)
+            VStack {
+                Spacer()
+                
+                if manager.stages.isEmpty {
+                    Text("Добавьте этапы в плане")
+                        .foregroundColor(.secondary)
+                } else if manager.isFinished {
+                    VStack(spacing: 20) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 80))
+                            .foregroundColor(.green)
+                        Text("ГОТОВО!").bold()
+                            .font(.largeTitle)
+                    }
+                } else {
+                    let stage = manager.stages[min(manager.currentStageIndex, manager.stages.count - 1)]
+                    
+                    VStack(spacing: 8) {
+                        Text(stage.type.label).bold()
+                            .font(.caption)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 4)
+                            .background(stage.type.color.opacity(0.2))
+                            .foregroundColor(stage.type.color)
+                            .clipShape(Capsule())
+                        
+                        Text(stage.name).bold()
+                            .font(.title2)
+                    }
+                    
+                    Text(formatTime(manager.timeLeft))
+                        .font(.system(size: 100, weight: .black, design: .monospaced))
+                        .padding(.vertical, 20)
+                    
+                    HStack {
+                        Image(systemName: "figure.walk")
+                        Text("\(stage.speed) КМ/Ч").bold()
+                    }
+                    .font(.title)
+                    .foregroundColor(.secondary)
+                    
+                    HStack(spacing: 40) {
+                        Button(action: manager.skipPrev) {
+                            Image(systemName: "backward.fill")
+                                .font(.title)
+                        }
+                        
+                        Button(action: manager.toggle) {
+                            Image(systemName: manager.isActive ? "pause.fill" : "play.fill")
+                                .font(.system(size: 40))
+                                .frame(width: 90, height: 90)
+                                .background(Color.white)
+                                .foregroundColor(.black)
+                                .clipShape(Circle())
+                        }
+                        
+                        Button(action: manager.skipNext) {
+                            Image(systemName: "forward.fill")
+                                .font(.title)
+                        }
+                    }
+                    .padding(.top, 20)
+                }
+                
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            
+            // Кнопки управления сверху (Liquid Glass)
             HStack {
                 Button(action: manager.reset) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 6) {
                         Image(systemName: "arrow.counterclockwise")
                         Text("Сброс").bold()
                     }
-                    .font(.caption)
+                    .font(.footnote)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(10)
                 }
-                .foregroundColor(.secondary)
+                .foregroundColor(.primary)
                 
                 Spacer()
                 
-                Button(action: { /* Настройки или звук */ }) {
+                Button(action: { /* Звук */ }) {
                     Image(systemName: "speaker.wave.2.fill")
-                        .font(.caption)
+                        .font(.footnote)
+                        .padding(10)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(10)
                 }
-                .foregroundColor(.secondary)
+                .foregroundColor(.primary)
             }
             .padding(.horizontal)
             .padding(.top, 10)
-
-            Spacer()
-            
-            if manager.stages.isEmpty {
-                Text("Добавьте этапы в плане")
-                    .foregroundColor(.secondary)
-            } else if manager.isFinished {
-                VStack(spacing: 20) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 80))
-                        .foregroundColor(.green)
-                    Text("ГОТОВО!")
-                        .font(.largeTitle).bold()
-                }
-            } else {
-                let stage = manager.stages[min(manager.currentStageIndex, manager.stages.count - 1)]
-                
-                VStack(spacing: 8) {
-                    Text(stage.type.label)
-                        .font(.caption).bold()
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
-                        .background(stage.type.color.opacity(0.2))
-                        .foregroundColor(stage.type.color)
-                        .clipShape(Capsule())
-                    
-                    Text(stage.name)
-                        .font(.title2).bold()
-                }
-                
-                Text(formatTime(manager.timeLeft))
-                    .font(.system(size: 100, weight: .black, design: .monospaced))
-                
-                HStack {
-                    Image(systemName: "figure.walk")
-                    Text("\(stage.speed) КМ/Ч").bold()
-                }
-                .font(.title)
-                .foregroundColor(.secondary)
-                
-                HStack(spacing: 40) {
-                    Button(action: manager.skipPrev) {
-                        Image(systemName: "backward.fill")
-                            .font(.title)
-                    }
-                    
-                    Button(action: manager.toggle) {
-                        Image(systemName: manager.isActive ? "pause.fill" : "play.fill")
-                            .font(.system(size: 50))
-                            .frame(width: 100, height: 100)
-                            .background(Color.white)
-                            .foregroundColor(.black)
-                            .clipShape(Circle())
-                    }
-                    
-                    Button(action: manager.skipNext) {
-                        Image(systemName: "forward.fill")
-                            .font(.title)
-                    }
-                }
-            }
         }
     }
     
