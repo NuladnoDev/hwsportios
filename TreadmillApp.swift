@@ -227,9 +227,9 @@ struct BuilderView: View {
                     Button(action: { /* Пустышка */ }) {
                         HStack {
                             Image(systemName: "sparkles")
-                            Text("Попросить ИИ")
+                            Text("Попросить ИИ").bold()
                         }
-                        .font(.caption).bold()
+                        .font(.caption)
                         .padding(6)
                         .background(Color.blue.opacity(0.2))
                         .cornerRadius(8)
