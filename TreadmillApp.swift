@@ -80,6 +80,16 @@ class WorkoutManager: ObservableObject {
         }
     }
     
+    func reset() {
+        isActive = false
+        isFinished = false
+        currentStageIndex = 0
+        if !stages.isEmpty {
+            timeLeft = stages[0].duration
+        }
+        timer?.invalidate()
+    }
+    
     func addStage(_ stage: WorkoutStage) {
         stages.append(stage)
     }
@@ -145,7 +155,28 @@ struct TimerView: View {
     @ObservedObject var manager: WorkoutManager
     
     var body: some View {
-        VStack(spacing: 40) {
+        VStack(spacing: 20) {
+            // Кнопки управления сверху
+            HStack {
+                Button(action: manager.reset) {
+                    Label("Сброс", systemImage: "arrow.counterclockwise")
+                        .font(.caption).bold()
+                }
+                .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                Button(action: { /* Настройки или звук */ }) {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .font(.caption)
+                }
+                .foregroundColor(.secondary)
+            }
+            .padding(.horizontal)
+            .padding(.top, 10)
+
+            Spacer()
+            
             if manager.stages.isEmpty {
                 Text("Добавьте этапы в плане")
                     .foregroundColor(.secondary)
@@ -236,6 +267,25 @@ struct BuilderView: View {
                 }
                 .onDelete { manager.stages.remove(atOffsets: $0) }
                 .onMove { manager.stages.move(fromOffsets: $0, toOffset: $1) }
+                
+                // Карточка про воду
+                Section {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: "drop.fill")
+                                .foregroundColor(.blue)
+                                .font(.title2)
+                            Text("Пейте воду").bold()
+                                .font(.headline)
+                        }
+                        
+                        Text("Не забывайте пить небольшими глотками за 15-20 минут до начала и во время тренировки, чтобы избежать обезвоживания.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.vertical, 8)
+                }
             }
             .navigationTitle("Тренировка")
             .toolbar {
@@ -246,9 +296,7 @@ struct BuilderView: View {
                             Text("Попросить ИИ").bold()
                         }
                         .font(.caption)
-                        .padding(6)
-                        .background(Color.blue.opacity(0.2))
-                        .cornerRadius(8)
+                        .foregroundColor(.primary)
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
