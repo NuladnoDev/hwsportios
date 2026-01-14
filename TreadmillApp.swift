@@ -74,6 +74,11 @@ class WorkoutManager: ObservableObject {
         }
     }
     
+    func addStage() {
+        let newStage = WorkoutStage(name: "Новый этап", duration: 60, speed: "5.0", type: .walk)
+        stages.append(newStage)
+    }
+    
     private func runTimer() {
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
@@ -217,7 +222,28 @@ struct BuilderView: View {
                 .onMove { manager.stages.move(fromOffsets: $0, toOffset: $1) }
             }
             .navigationTitle("Тренировка")
-            .toolbar { EditButton() }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { /* Пустышка */ }) {
+                        HStack {
+                            Image(systemName: "sparkles")
+                            Text("Попросить ИИ")
+                        }
+                        .font(.caption).bold()
+                        .padding(6)
+                        .background(Color.blue.opacity(0.2))
+                        .cornerRadius(8)
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    HStack {
+                        EditButton()
+                        Button(action: manager.addStage) {
+                            Image(systemName: "plus")
+                        }
+                    }
+                }
+            }
         }
     }
 }
