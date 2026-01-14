@@ -47,15 +47,21 @@ class WorkoutManager: ObservableObject {
     @Published var isActive = false
     @Published var isFinished = false
     
+    // Для модального окна
+    @Published var showingAddStage = false
+    @Published var editingStage: WorkoutStage?
+    
     private var timer: Timer?
     
     func start() {
+        if stages.isEmpty { return }
         timeLeft = stages[currentStageIndex].duration
         isActive = true
         runTimer()
     }
     
     func toggle() {
+        if stages.isEmpty { return }
         isActive.toggle()
         if isActive { runTimer() } else { timer?.invalidate() }
     }
@@ -74,9 +80,14 @@ class WorkoutManager: ObservableObject {
         }
     }
     
-    func addStage() {
-        let newStage = WorkoutStage(name: "Новый этап", duration: 60, speed: "5.0", type: .walk)
-        stages.append(newStage)
+    func addStage(_ stage: WorkoutStage) {
+        stages.append(stage)
+    }
+    
+    func updateStage(_ stage: WorkoutStage) {
+        if let index = stages.firstIndex(where: { $0.id == stage.id }) {
+            stages[index] = stage
+        }
     }
     
     private func runTimer() {
@@ -207,14 +218,19 @@ struct BuilderView: View {
     var body: some View {
         NavigationView {
             List {
-                ForEach($manager.stages) { $stage in
-                    HStack {
-                        Circle().fill(stage.type.color).frame(width: 10)
-                        VStack(alignment: .leading) {
-                            TextField("Название", text: $stage.name)
-                                .font(.headline)
-                            Text("\(stage.duration / 60) мин • \(stage.speed) км/ч")
-                                .font(.subheadline).foregroundColor(.secondary)
+                ForEach(manager.stages) { stage in
+                    Button(action: {
+                        manager.editingStage = stage
+                    }) {
+                        HStack {
+                            Circle().fill(stage.type.color).frame(width: 10)
+                            VStack(alignment: .leading) {
+                                Text(stage.name)
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                                Text("\(stage.duration / 60) мин • \(stage.speed) км/ч")
+                                    .font(.subheadline).foregroundColor(.secondary)
+                            }
                         }
                     }
                 }
@@ -238,12 +254,92 @@ struct BuilderView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack {
                         EditButton()
-                        Button(action: manager.addStage) {
+                        Button(action: { manager.showingAddStage = true }) {
                             Image(systemName: "plus")
                         }
                     }
                 }
             }
+            .sheet(isPresented: $manager.showingAddStage) {
+                StageEditorView(manager: manager)
+            }
+            .sheet(item: $manager.editingStage) { stage in
+                StageEditorView(manager: manager, stageToEdit: stage)
+            }
+        }
+    }
+}
+
+struct StageEditorView: View {
+    @Environment(\.presentationMode) var presentationMode
+    @ObservedObject var manager: WorkoutManager
+    
+    @State private var name: String
+    @State private var minutes: Int
+    @State private var speed: String
+    @State private var type: StageType
+    
+    var stageToEdit: WorkoutStage?
+    
+    init(manager: WorkoutManager, stageToEdit: WorkoutStage? = nil) {
+        self.manager = manager
+        self.stageToEdit = stageToEdit
+        
+        _name = State(initialValue: stageToEdit?.name ?? "Новый этап")
+        _minutes = State(initialValue: (stageToEdit?.duration ?? 60) / 60)
+        _speed = State(initialValue: stageToEdit?.speed ?? "5.0")
+        _type = State(initialValue: stageToEdit?.type ?? .walk)
+    }
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("ОСНОВНОЕ")) {
+                    TextField("Название", text: $name)
+                    
+                    Picker("Тип", selection: $type) {
+                        Text("Подготовка").tag(StageType.warmup)
+                        Text("Интенсив").tag(StageType.run)
+                        Text("Отдых").tag(StageType.walk)
+                        Text("Заминка").tag(StageType.cooldown)
+                    }
+                }
+                
+                Section(header: Text("ПАРАМЕТРЫ")) {
+                    Stepper("Длительность: \(minutes) мин", value: $minutes, in: 1...60)
+                    
+                    HStack {
+                        Text("Скорость (км/ч)")
+                        Spacer()
+                        TextField("5.0", text: $speed)
+                            .multilineTextAlignment(.trailing)
+                            .keyboardType(.decimalPad)
+                    }
+                }
+            }
+            .navigationTitle(stageToEdit == nil ? "Добавить" : "Изменить")
+            .navigationBarItems(
+                leading: Button("Отмена") {
+                    presentationMode.wrappedValue.dismiss()
+                },
+                trailing: Button("Готово") {
+                    let newStage = WorkoutStage(
+                        id: stageToEdit?.id ?? UUID(),
+                        name: name,
+                        duration: minutes * 60,
+                        speed: speed,
+                        type: type
+                    )
+                    
+                    if stageToEdit == nil {
+                        manager.addStage(newStage)
+                    } else {
+                        manager.updateStage(newStage)
+                    }
+                    presentationMode.wrappedValue.dismiss()
+                }
+                .bold()
+            )
         }
     }
 }
