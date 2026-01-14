@@ -3,13 +3,12 @@ workflows:
     name: iOS Build (Unsigned)
     max_build_duration: 30
     instance_type: mac_mini_m1
-    # Мы УБРАЛИ секцию integrations, чтобы он не искал ключи Apple
     publishing:
       email:
         recipients:
           - helloacc223@outlook.com
     artifacts:
-      - build/ios/iphoneos/*.app.zip # Codemagic сам запакует .app в .zip
+      - "*.ipa" # Будем искать готовый пакет
     scripts:
       - name: Initialize Xcode Project
         script: | 
@@ -22,20 +21,20 @@ workflows:
           target.add_file_references([file])
           project.save
           "
-      - name: Build Unsigned App
+      - name: Build and Package
         script: |
-          # Чистая сборка без подписи
+          # Собираем в текущую папку (derivedDataPath .)
           xcodebuild build \
             -project Treadmill.xcodeproj \
             -scheme Treadmill \
             -sdk iphoneos \
             -configuration Release \
+            -derivedDataPath . \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            CONFIGURATION_BUILD_DIR=build/Release-iphoneos
-          
-          # Создаем папку для результата
-          mkdir -p build/ios/iphoneos
-          # Упаковываем .app в zip, чтобы Codemagic его подхватил как артефакт
-          cd build/Release-iphoneos && zip -r ../ios/iphoneos/Treadmill.app.zip Treadmill.app
+            CODE_SIGNING_ALLOWED=NO
+
+          # Создаем структуру Payload для .ipa (это правильный формат для Sideloadly)
+          mkdir -p Payload
+          cp -R Build/Products/Release-iphoneos/Treadmill.app Payload/
+          zip -r Treadmill.ipa Payload
