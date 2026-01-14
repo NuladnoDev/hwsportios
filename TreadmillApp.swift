@@ -322,7 +322,7 @@ struct StageEditorView: View {
                 leading: Button("Отмена") {
                     presentationMode.wrappedValue.dismiss()
                 },
-                trailing: Button("Готово") {
+                trailing: Button(action: {
                     let newStage = WorkoutStage(
                         id: stageToEdit?.id ?? UUID(),
                         name: name,
@@ -337,8 +337,9 @@ struct StageEditorView: View {
                         manager.updateStage(newStage)
                     }
                     presentationMode.wrappedValue.dismiss()
+                }) {
+                    Text("Готово").bold()
                 }
-                .bold()
             )
         }
     }
