@@ -46,7 +46,7 @@ workflows:
           project = Xcodeproj::Project.new('Treadmill.xcodeproj')
           target = project.new_target(:application, 'Treadmill', :ios, '15.0')
           
-          # Добавляем ТОЛЬКО код и сториборд. Info.plist НЕ добавляем как файл.
+          # Добавляем файлы
           ['TreadmillApp.swift', 'LaunchScreen.storyboard'].each do |f|
             file_ref = project.new_file(f)
             target.add_file_references([file_ref])
@@ -54,7 +54,7 @@ workflows:
           
           target.build_configurations.each do |config| 
             s = config.build_settings
-            s['INFOPLIST_FILE'] = 'Info.plist' # Просто указываем путь
+            s['INFOPLIST_FILE'] = 'Info.plist'
             s['PRODUCT_BUNDLE_IDENTIFIER'] = 'com.lario.treadmill'
             s['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
             s['SWIFT_VERSION'] = '5.0'
@@ -63,6 +63,13 @@ workflows:
             s['CODE_SIGN_IDENTITY'] = ''
             s['GENERATE_INFOPLIST_FILE'] = 'NO'
           end
+
+          # СОЗДАЕМ SHARED SCHEME
+          scheme = Xcodeproj::XCScheme.new
+          scheme.add_build_target(target)
+          scheme.set_launch_target(target)
+          scheme.save_as(project.path, 'Treadmill', true)
+
           project.save
           "
       - name: Build and Package

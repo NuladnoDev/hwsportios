@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import AudioToolbox
 
 // MARK: - Models
 enum StageType: String, Codable {
@@ -129,7 +130,10 @@ struct TimerView: View {
     
     var body: some View {
         VStack(spacing: 40) {
-            if manager.isFinished {
+            if manager.stages.isEmpty {
+                Text("Добавьте этапы в плане")
+                    .foregroundColor(.secondary)
+            } else if manager.isFinished {
                 VStack(spacing: 20) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 80))
@@ -138,7 +142,7 @@ struct TimerView: View {
                         .font(.largeTitle).bold()
                 }
             } else {
-                let stage = manager.stages[manager.currentStageIndex]
+                let stage = manager.stages[min(manager.currentStageIndex, manager.stages.count - 1)]
                 
                 VStack(spacing: 8) {
                     Text(stage.type.label)
