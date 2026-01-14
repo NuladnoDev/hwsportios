@@ -10,10 +10,10 @@ workflows:
     artifacts:
       - "*.ipa"
     scripts:
-      - name: Initialize Xcode Project and Info.plist
+      - name: Initialize Xcode Project
         script: | 
           set -e
-          # 1. Создаем минимальный Info.plist
+          # 1. Создаем Info.plist без лишних ссылок на LaunchScreen (чтобы не ругался)
           cat <<EOF > Info.plist
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -22,7 +22,7 @@ workflows:
             <key>CFBundleExecutable</key>
             <string>Treadmill</string>
             <key>CFBundleIdentifier</key>
-            <string>com.yourname.treadmill</string>
+            <string>com.lario.treadmill</string>
             <key>CFBundleName</key>
             <string>Treadmill</string>
             <key>CFBundleShortVersionString</key>
@@ -31,63 +31,48 @@ workflows:
             <string>1</string>
             <key>MinimumOSVersion</key>
             <string>15.0</string>
-            <key>UILaunchStoryboardName</key>
-            <string>LaunchScreen</string>
             <key>LSRequiresIPhoneOS</key>
             <true/>
           </dict>
           </plist>
           EOF
 
-          # 2. Создаем проект Xcode
+          # 2. Создаем проект Xcode через Ruby
           gem install xcodeproj
           ruby -e "
           require 'xcodeproj'
           project = Xcodeproj::Project.new('Treadmill.xcodeproj')
           target = project.new_target(:application, 'Treadmill', :ios, '15.0')
           file = project.new_file('TreadmillApp.swift')
-          info_plist = project.new_file('Info.plist')
           target.add_file_references([file])
+          
           target.build_configurations.each do |config| 
-            config.build_settings['INFOPLIST_FILE'] = 'Info.plist'
-            config.build_settings['PRODUCT_BUNDLE_IDENTIFIER'] = 'com.yourname.treadmill'
-            config.build_settings['ASSETCATALOG_COMPILER_APPICON_NAME'] = 'AppIcon'
-            config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
-            config.build_settings['SWIFT_VERSION'] = '5.0'
+            s = config.build_settings
+            s['INFOPLIST_FILE'] = 'Info.plist'
+            s['PRODUCT_BUNDLE_IDENTIFIER'] = 'com.lario.treadmill'
+            s['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+            s['SWIFT_VERSION'] = '5.0'
+            s['CODE_SIGNING_ALLOWED'] = 'NO'
+            s['CODE_SIGNING_REQUIRED'] = 'NO'
+            s['GENERATE_INFOPLIST_FILE'] = 'NO' # Отключаем автогенерацию, юзаем наш файл
           end
           project.save
           "
       - name: Build and Package
         script: |
           set -e
-          # Собираем
-          xcodebuild build \
+          # Сборка с игнорированием ошибок подписи на уровне команды
+          xcodebuild archive \
             -project Treadmill.xcodeproj \
             -scheme Treadmill \
-            -sdk iphoneos \
             -configuration Release \
-            -derivedDataPath build_output \
-            CODE_SIGN_IDENTITY="" \
+            -archivePath build/Treadmill.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGN_IDENTITY="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES
 
-          # Находим .app
-          APP_PATH=$(find build_output -name "Treadmill.app" -type d | head -n 1)
-          echo "Found app at: $APP_PATH"
-          
-          if [ -z "$APP_PATH" ]; then
-            echo "Error: Treadmill.app not found!"
-            exit 1
-          fi
-
-          # Проверяем наличие исполняемого файла
-          if [ ! -f "$APP_PATH/Treadmill" ]; then
-            echo "Error: Executable 'Treadmill' not found in $APP_PATH"
-            ls -R "$APP_PATH"
-            exit 1
-          fi
-
+          # Вытаскиваем .app из архива
           mkdir -p Payload
-          cp -R "$APP_PATH" Payload/
+          cp -R build/Treadmill.xcarchive/Products/Applications/Treadmill.app Payload/
           zip -r Treadmill.ipa Payload
-          echo "Success! IPA created."
