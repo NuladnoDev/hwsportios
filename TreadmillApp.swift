@@ -217,3 +217,12 @@ struct BuilderView: View {
         }
     }
 }
+
+@main
+struct TreadmillApp: App {
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
+    }
+}
