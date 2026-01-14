@@ -159,8 +159,11 @@ struct TimerView: View {
             // Кнопки управления сверху
             HStack {
                 Button(action: manager.reset) {
-                    Label("Сброс", systemImage: "arrow.counterclockwise")
-                        .font(.caption).bold()
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.counterclockwise")
+                        Text("Сброс").bold()
+                    }
+                    .font(.caption)
                 }
                 .foregroundColor(.secondary)
                 
