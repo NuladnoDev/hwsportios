@@ -35,31 +35,26 @@ workflows:
             <string>LaunchScreen</string>
             <key>LSRequiresIPhoneOS</key>
             <true/>
-            <key>UIApplicationSceneManifest</key>
-            <dict>
-              <key>UIApplicationSupportsMultipleScenes</key>
-              <false/>
-            </dict>
           </dict>
           </plist>
           EOF
 
-          # 2. Создаем проект Xcode через Ruby
+          # 2. Создаем проект Xcode
           gem install xcodeproj
           ruby -e "
           require 'xcodeproj'
           project = Xcodeproj::Project.new('Treadmill.xcodeproj')
           target = project.new_target(:application, 'Treadmill', :ios, '15.0')
           
-          # Добавляем файлы
-          ['TreadmillApp.swift', 'LaunchScreen.storyboard', 'Info.plist'].each do |f|
+          # Добавляем ТОЛЬКО код и сториборд. Info.plist НЕ добавляем как файл.
+          ['TreadmillApp.swift', 'LaunchScreen.storyboard'].each do |f|
             file_ref = project.new_file(f)
             target.add_file_references([file_ref])
           end
           
           target.build_configurations.each do |config| 
             s = config.build_settings
-            s['INFOPLIST_FILE'] = 'Info.plist'
+            s['INFOPLIST_FILE'] = 'Info.plist' # Просто указываем путь
             s['PRODUCT_BUNDLE_IDENTIFIER'] = 'com.lario.treadmill'
             s['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
             s['SWIFT_VERSION'] = '5.0'
@@ -67,15 +62,13 @@ workflows:
             s['CODE_SIGNING_REQUIRED'] = 'NO'
             s['CODE_SIGN_IDENTITY'] = ''
             s['GENERATE_INFOPLIST_FILE'] = 'NO'
-            s['MARKETING_VERSION'] = '1.0'
-            s['CURRENT_PROJECT_VERSION'] = '1'
           end
           project.save
           "
       - name: Build and Package
         script: |
           set -e
-          # Сборка
+          # Сборка архива
           xcodebuild archive \
             -project Treadmill.xcodeproj \
             -scheme Treadmill \
@@ -90,3 +83,4 @@ workflows:
           mkdir -p Payload
           cp -R build/Treadmill.xcarchive/Products/Applications/Treadmill.app Payload/
           zip -r Treadmill.ipa Payload
+          echo "Build successful! IPA is ready."
