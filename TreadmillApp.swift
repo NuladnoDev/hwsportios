@@ -134,20 +134,80 @@ struct ContentView: View {
     @State private var selectedTab = 0
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            BuilderView(manager: manager)
-                .tabItem {
-                    Label("План", systemImage: "list.bullet.rectangle.portrait")
+        ZStack(alignment: .bottom) {
+            // Контент
+            Group {
+                if selectedTab == 0 {
+                    BuilderView(manager: manager)
+                } else {
+                    TimerView(manager: manager)
                 }
-                .tag(0)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             
-            TimerView(manager: manager)
-                .tabItem {
-                    Label("Таймер", systemImage: "timer")
+            // Кастомная навигация (Liquid Glass)
+            HStack(spacing: 12) {
+                // Кнопка поиска (отдельно слева)
+                Button(action: { /* Поиск */ }) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 50, height: 50)
+                        .background(Color.white.opacity(0.15))
+                        .clipShape(Circle())
                 }
-                .tag(1)
+                
+                // Основная панель
+                HStack(spacing: 0) {
+                    NavButton(title: "План", icon: "list.bullet.rectangle.portrait", isSelected: selectedTab == 0) {
+                        selectedTab = 0
+                    }
+                    
+                    NavButton(title: "Таймер", icon: "timer", isSelected: selectedTab == 1) {
+                        selectedTab = 1
+                    }
+                    
+                    NavButton(title: "Настройки", icon: "gearshape.fill", isSelected: false) {
+                        // Настройки
+                    }
+                }
+                .padding(.horizontal, 8)
+                .frame(height: 60)
+                .background(.ultraThinMaterial)
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                )
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 30) // Отступ от низа экрана
         }
         .preferredColorScheme(.dark)
+    }
+}
+
+struct NavButton: View {
+    let title: String
+    let icon: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 20))
+                Text(title)
+                    .font(.system(size: 10, weight: .medium))
+            }
+            .foregroundColor(isSelected ? .blue : .white.opacity(0.6))
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .background(isSelected ? Color.white.opacity(0.1) : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 15))
+            .padding(.horizontal, 4)
+        }
     }
 }
 
