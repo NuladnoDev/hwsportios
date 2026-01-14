@@ -1,20 +1,13 @@
 workflows:
   ios-workflow:
-    name: iOS Workflow
+    name: iOS Build (Unsigned)
     max_build_duration: 30
     instance_type: mac_mini_m1
-    integrations:
-      app_store_connect: apple_developer_portal # Имя интеграции в настройках Codemagic (обычно по умолчанию)
-    publishing:
-      app_store_connect:
-        auth: integration # Использует данные из подключенной интеграции
-      email:
-        recipients:
-          - larionovnikita605@gmail.com # ЗАМЕНИ НА СВОЙ EMAIL
+    artifacts:
+      - build/ios/iphoneos/*.app
     scripts:
       - name: Initialize Xcode Project
         script: | 
-          # Этот скрипт создает пустой проект Xcode вокруг твоего Swift файла
           gem install xcodeproj
           ruby -e "
           require 'xcodeproj'
@@ -24,6 +17,18 @@ workflows:
           target.add_file_references([file])
           project.save
           "
-      - name: Build iOS App
+      - name: Build Unsigned App
         script: |
-          xcodebuild build -project Treadmill.xcodeproj -scheme Treadmill -sdk iphoneos -configuration Release
+          # Собираем без подписи (CODE_SIGNING_ALLOWED=NO)
+          xcodebuild build \
+            -project Treadmill.xcodeproj \
+            -scheme Treadmill \
+            -sdk iphoneos \
+            -configuration Release \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+          
+          # Готовим папку для артефактов
+          mkdir -p build/ios/iphoneos
+          cp -R build/Release-iphoneos/Treadmill.app build/ios/iphoneos/Treadmill.app
