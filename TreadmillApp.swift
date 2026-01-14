@@ -162,9 +162,9 @@ struct TimerView: View {
                 
                 HStack {
                     Image(systemName: "figure.walk")
-                    Text("\(stage.speed) КМ/Ч")
+                    Text("\(stage.speed) КМ/Ч").bold()
                 }
-                .font(.title).bold()
+                .font(.title)
                 .foregroundColor(.secondary)
                 
                 HStack(spacing: 40) {
