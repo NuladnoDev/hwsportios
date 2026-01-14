@@ -12,7 +12,7 @@ workflows:
     scripts:
       - name: Initialize Xcode Project and Info.plist
         script: | 
-          # 1. Создаем минимальный Info.plist (без него приложение не соберется правильно)
+          # 1. Создаем минимальный Info.plist
           cat <<EOF > Info.plist
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -61,10 +61,15 @@ workflows:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-          # Проверяем где лежит .app и пакуем в .ipa
-          APP_PATH=\$(find build_output -name "Treadmill.app" -type d | head -n 1)
-          echo "Found app at: \$APP_PATH"
+          # Находим .app и пакуем в .ipa (убрали лишний бэкслеш перед $)
+          APP_PATH=$(find build_output -name "Treadmill.app" -type d | head -n 1)
+          echo "Found app at: $APP_PATH"
           
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: Treadmill.app not found!"
+            exit 1
+          fi
+
           mkdir -p Payload
-          cp -R "\$APP_PATH" Payload/
-          zip -vr Treadmill.ipa Payload
+          cp -R "$APP_PATH" Payload/
+          zip -r Treadmill.ipa Payload
