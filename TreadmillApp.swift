@@ -1,6 +1,7 @@
 import SwiftUI
 import AVFoundation
 import AudioToolbox
+import UserNotifications
 
 // MARK: - Models
 enum AppLanguage: String, Codable {
@@ -49,6 +50,9 @@ class WorkoutManager: ObservableObject {
     @Published var isActive = false
     @Published var isFinished = false
     
+    // Для фоновой работы
+    private var lastBackgroundTime: Date?
+    
     // Для модальных окон
     @Published var showingAddStage = false
     @Published var showingSettings = false
@@ -58,6 +62,41 @@ class WorkoutManager: ObservableObject {
     
     init() {
         setupDefaultStages()
+        requestNotificationPermission()
+    }
+    
+    private func requestNotificationPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { success, error in
+            if success {
+                print("Permission granted")
+            } else if let error = error {
+                print(error.localizedDescription)
+            }
+        }
+    }
+    
+    func appDidEnterBackground() {
+        if isActive {
+            lastBackgroundTime = Date()
+        }
+    }
+    
+    func appWillEnterForeground() {
+        guard let lastTime = lastBackgroundTime, isActive else { return }
+        let timePassed = Int(Date().timeIntervalSince(lastTime))
+        
+        // Пересчитываем время
+        var remainingPassed = timePassed
+        while remainingPassed > 0 && isActive {
+            if remainingPassed < timeLeft {
+                timeLeft -= remainingPassed
+                remainingPassed = 0
+            } else {
+                remainingPassed -= timeLeft
+                nextStage()
+            }
+        }
+        lastBackgroundTime = nil
     }
     
     func setupDefaultStages() {
@@ -146,11 +185,38 @@ class WorkoutManager: ObservableObject {
             currentStageIndex += 1
             timeLeft = stages[currentStageIndex].duration
             playNotificationSound()
+            sendStageNotification()
         } else {
             isActive = false
             isFinished = true
             timer?.invalidate()
+            sendFinishNotification()
         }
+    }
+    
+    private func sendStageNotification() {
+        let stage = stages[currentStageIndex]
+        let content = UNMutableNotificationContent()
+        content.title = t("Следующий этап: ", "Next stage: ") + stage.name
+        content.body = "\(stage.type.label(for: language)): \(formatTime(stage.duration)), \(stage.speed) " + t("КМ/Ч", "KM/H")
+        content.sound = .default
+        
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+    }
+    
+    private func sendFinishNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = t("Тренировка окончена!", "Workout finished!")
+        content.body = t("Вы отлично поработали!", "Great job today!")
+        content.sound = .default
+        
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+    }
+    
+    private func formatTime(_ s: Int) -> String {
+        "\(s / 60):\(String(format: "%02d", s % 60))"
     }
     
     private func playNotificationSound() {
@@ -163,6 +229,7 @@ struct ContentView: View {
     @StateObject var manager = WorkoutManager()
     @State private var selectedTab = 0
     @Namespace private var animation
+    @Environment(\.scenePhase) var scenePhase
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -222,6 +289,13 @@ struct ContentView: View {
             .padding(.bottom, 20)
         }
         .preferredColorScheme(.dark)
+        .onChange(of: scenePhase) { newPhase in
+            if newPhase == .background {
+                manager.appDidEnterBackground()
+            } else if newPhase == .active {
+                manager.appWillEnterForeground()
+            }
+        }
     }
 }
 
