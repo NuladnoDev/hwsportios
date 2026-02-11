@@ -132,6 +132,7 @@ class WorkoutManager: ObservableObject {
 struct ContentView: View {
     @StateObject var manager = WorkoutManager()
     @State private var selectedTab = 0
+    @Namespace private var animation
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -145,31 +146,50 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             
-            // Кастомная навигация (Liquid Glass)
-            HStack(spacing: 12) {
-
+            // Кастомная навигация (Liquid Glass iOS 26)
+            ZStack {
+                // Фоновое свечение (Glow)
+                Capsule()
+                    .fill(Color.blue.opacity(0.15))
+                    .frame(width: 120, height: 40)
+                    .blur(radius: 30)
+                    .offset(x: selectedTab == 0 ? -40 : 40)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.7), value: selectedTab)
                 
                 // Основная панель
-                HStack(spacing: 4) {
-                    NavButton(title: "План", icon: "list.bullet.rectangle.portrait", isSelected: selectedTab == 0) {
+                HStack(spacing: 8) {
+                    NavButton(title: "План", icon: "list.bullet.rectangle.portrait", isSelected: selectedTab == 0, animation: animation) {
                         selectedTab = 0
                     }
                     
-                    NavButton(title: "Таймер", icon: "timer", isSelected: selectedTab == 1) {
+                    NavButton(title: "Таймер", icon: "timer", isSelected: selectedTab == 1, animation: animation) {
                         selectedTab = 1
                     }
                 }
-                .padding(.horizontal, 6)
-                .frame(height: 56)
-                .background(.ultraThinMaterial)
-                .clipShape(Capsule())
-                .overlay(
-                    Capsule()
-                        .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                .padding(.horizontal, 8)
+                .frame(width: 220, height: 64)
+                .background(
+                    ZStack {
+                        // Основной материал стекла
+                        RoundedRectangle(cornerRadius: 32, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                        
+                        // Внутренний блик
+                        RoundedRectangle(cornerRadius: 32, style: .continuous)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [.white.opacity(0.4), .white.opacity(0.1), .clear, .white.opacity(0.1)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1
+                            )
+                    }
                 )
+                .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+                .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 20) 
+            .padding(.bottom, 24)
         }
         .preferredColorScheme(.dark)
     }
@@ -179,22 +199,33 @@ struct NavButton: View {
     let title: String
     let icon: String
     let isSelected: Bool
+    var animation: Namespace.ID
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 2) {
-                Image(systemName: icon)
-                    .font(.system(size: 18))
+            VStack(spacing: 4) {
+                Image(systemName: isSelected ? icon + ".fill" : icon)
+                    .font(.system(size: 20, weight: isSelected ? .bold : .medium))
+                    .symbolRenderingMode(.hierarchical)
+                
                 Text(title)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 11, weight: isSelected ? .bold : .medium))
             }
-            .foregroundColor(isSelected ? .blue : .white.opacity(0.5))
+            .foregroundColor(isSelected ? .blue : .white.opacity(0.6))
             .frame(maxWidth: .infinity)
-            .frame(height: 48)
-            .background(isSelected ? Color.white.opacity(0.08) : Color.clear)
-            .clipShape(Capsule())
+            .frame(height: 52)
+            .background(
+                ZStack {
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .fill(Color.blue.opacity(0.12))
+                            .matchedGeometryEffect(id: "tab", in: animation)
+                    }
+                }
+            )
         }
+        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: isSelected)
     }
 }
 
