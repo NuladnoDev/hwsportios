@@ -147,18 +147,10 @@ struct ContentView: View {
             
             // Кастомная навигация (Liquid Glass)
             HStack(spacing: 12) {
-                // Кнопка поиска (отдельно слева)
-                Button(action: { /* Поиск */ }) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(width: 50, height: 50)
-                        .background(Color.white.opacity(0.15))
-                        .clipShape(Circle())
-                }
+
                 
                 // Основная панель
-                HStack(spacing: 0) {
+                HStack(spacing: 4) {
                     NavButton(title: "План", icon: "list.bullet.rectangle.portrait", isSelected: selectedTab == 0) {
                         selectedTab = 0
                     }
@@ -166,13 +158,9 @@ struct ContentView: View {
                     NavButton(title: "Таймер", icon: "timer", isSelected: selectedTab == 1) {
                         selectedTab = 1
                     }
-                    
-                    NavButton(title: "Настройки", icon: "gearshape.fill", isSelected: false) {
-                        // Настройки
-                    }
                 }
-                .padding(.horizontal, 8)
-                .frame(height: 60)
+                .padding(.horizontal, 6)
+                .frame(height: 56)
                 .background(.ultraThinMaterial)
                 .clipShape(Capsule())
                 .overlay(
@@ -181,7 +169,7 @@ struct ContentView: View {
                 )
             }
             .padding(.horizontal, 16)
-            .padding(.bottom, 30) // Отступ от низа экрана
+            .padding(.bottom, 20) 
         }
         .preferredColorScheme(.dark)
     }
@@ -195,18 +183,17 @@ struct NavButton: View {
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 4) {
+            VStack(spacing: 2) {
                 Image(systemName: icon)
-                    .font(.system(size: 20))
+                    .font(.system(size: 18))
                 Text(title)
                     .font(.system(size: 10, weight: .medium))
             }
-            .foregroundColor(isSelected ? .blue : .white.opacity(0.6))
+            .foregroundColor(isSelected ? .blue : .white.opacity(0.5))
             .frame(maxWidth: .infinity)
-            .frame(height: 50)
-            .background(isSelected ? Color.white.opacity(0.1) : Color.clear)
-            .clipShape(RoundedRectangle(cornerRadius: 15))
-            .padding(.horizontal, 4)
+            .frame(height: 48)
+            .background(isSelected ? Color.white.opacity(0.08) : Color.clear)
+            .clipShape(Capsule())
         }
     }
 }
