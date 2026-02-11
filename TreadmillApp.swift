@@ -146,39 +146,56 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             
-            // Кастомная навигация (Liquid Glass iOS 26)
+            // Кастомная навигация (Telegram-style Liquid Blob)
             ZStack {
-                // Фоновое свечение (Glow)
-                Capsule()
-                    .fill(Color.blue.opacity(0.15))
-                    .frame(width: 120, height: 40)
-                    .blur(radius: 30)
-                    .offset(x: selectedTab == 0 ? -40 : 40)
-                    .animation(.spring(response: 0.5, dampingFraction: 0.7), value: selectedTab)
-                
-                // Основная панель
-                HStack(spacing: 8) {
-                    NavButton(title: "План", icon: "list.bullet.rectangle.portrait", isSelected: selectedTab == 0, animation: animation) {
-                        selectedTab = 0
-                    }
-                    
-                    NavButton(title: "Таймер", icon: "timer", isSelected: selectedTab == 1, animation: animation) {
-                        selectedTab = 1
+                // Основная панель (Glass)
+                HStack(spacing: 0) {
+                    GeometryReader { proxy in
+                        let width = proxy.size.width / 2
+                        
+                        ZStack(alignment: .leading) {
+                            // Жидкий индикатор (Blob/Drop)
+                            Capsule()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [.blue.opacity(0.3), .blue.opacity(0.15)],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                )
+                                .frame(width: width - 12, height: 44)
+                                .offset(x: selectedTab == 0 ? 6 : width + 6)
+                                .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
+                            
+                            // Сама навигация
+                            HStack(spacing: 0) {
+                                NavButton(title: "План", icon: "list.bullet.rectangle.portrait", isSelected: selectedTab == 0) {
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7, blendDuration: 0)) {
+                                        selectedTab = 0
+                                    }
+                                }
+                                
+                                NavButton(title: "Таймер", icon: "timer", isSelected: selectedTab == 1) {
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7, blendDuration: 0)) {
+                                        selectedTab = 1
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
-                .padding(.horizontal, 8)
-                .frame(width: 220, height: 64)
+                .frame(width: 240, height: 60)
                 .background(
                     ZStack {
-                        // Основной материал стекла
-                        RoundedRectangle(cornerRadius: 32, style: .continuous)
+                        // Glass background
+                        RoundedRectangle(cornerRadius: 30, style: .continuous)
                             .fill(.ultraThinMaterial)
                         
-                        // Внутренний блик
-                        RoundedRectangle(cornerRadius: 32, style: .continuous)
+                        // Inner glow
+                        RoundedRectangle(cornerRadius: 30, style: .continuous)
                             .stroke(
                                 LinearGradient(
-                                    colors: [.white.opacity(0.4), .white.opacity(0.1), .clear, .white.opacity(0.1)],
+                                    colors: [.white.opacity(0.25), .clear, .white.opacity(0.05)],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 ),
@@ -186,8 +203,8 @@ struct ContentView: View {
                             )
                     }
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
-                .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+                .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+                .shadow(color: .black.opacity(0.2), radius: 15, x: 0, y: 8)
             }
             .padding(.bottom, 24)
         }
@@ -199,7 +216,6 @@ struct NavButton: View {
     let title: String
     let icon: String
     let isSelected: Bool
-    var animation: Namespace.ID
     let action: () -> Void
     
     var body: some View {
@@ -208,24 +224,16 @@ struct NavButton: View {
                 Image(systemName: isSelected ? icon + ".fill" : icon)
                     .font(.system(size: 20, weight: isSelected ? .bold : .medium))
                     .symbolRenderingMode(.hierarchical)
+                    .scaleEffect(isSelected ? 1.1 : 1.0)
                 
                 Text(title)
                     .font(.system(size: 11, weight: isSelected ? .bold : .medium))
             }
-            .foregroundColor(isSelected ? .blue : .white.opacity(0.6))
+            .foregroundColor(isSelected ? .blue : .white.opacity(0.5))
             .frame(maxWidth: .infinity)
-            .frame(height: 52)
-            .background(
-                ZStack {
-                    if isSelected {
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .fill(Color.blue.opacity(0.12))
-                            .matchedGeometryEffect(id: "tab", in: animation)
-                    }
-                }
-            )
+            .contentShape(Rectangle())
         }
-        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: isSelected)
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
