@@ -3,6 +3,11 @@ import AVFoundation
 import AudioToolbox
 
 // MARK: - Models
+enum AppLanguage: String, Codable {
+    case russian = "RU"
+    case english = "EN"
+}
+
 enum StageType: String, Codable {
     case warmup, run, walk, cooldown
     
@@ -15,12 +20,12 @@ enum StageType: String, Codable {
         }
     }
     
-    var label: String {
+    func label(for lang: AppLanguage) -> String {
         switch self {
-        case .warmup: return "ПОДГОТОВКА"
-        case .run: return "ИНТЕНСИВ"
-        case .walk: return "ОТДЫХ"
-        case .cooldown: return "ЗАМИНКА"
+        case .warmup: return lang == .russian ? "ПОДГОТОВКА" : "WARMUP"
+        case .run: return lang == .russian ? "ИНТЕНСИВ" : "INTENSE"
+        case .walk: return lang == .russian ? "ОТДЫХ" : "REST"
+        case .cooldown: return lang == .russian ? "ЗАМИНКА" : "COOLDOWN"
         }
     }
 }
@@ -35,23 +40,48 @@ struct WorkoutStage: Identifiable, Codable {
 
 // MARK: - App State
 class WorkoutManager: ObservableObject {
-    @Published var stages: [WorkoutStage] = [
-        WorkoutStage(name: "Разминка", duration: 300, speed: "5.0", type: .warmup),
-        WorkoutStage(name: "Бег", duration: 60, speed: "6.5", type: .run),
-        WorkoutStage(name: "Ходьба", duration: 120, speed: "5.0", type: .walk),
-        WorkoutStage(name: "Заминка", duration: 300, speed: "4.5", type: .cooldown)
-    ]
+    @Published var language: AppLanguage = .russian
+    
+    @Published var stages: [WorkoutStage] = []
     
     @Published var currentStageIndex = 0
     @Published var timeLeft = 0
     @Published var isActive = false
     @Published var isFinished = false
     
-    // Для модального окна
+    // Для модальных окон
     @Published var showingAddStage = false
+    @Published var showingSettings = false
     @Published var editingStage: WorkoutStage?
     
     private var timer: Timer?
+    
+    init() {
+        setupDefaultStages()
+    }
+    
+    func setupDefaultStages() {
+        if language == .russian {
+            stages = [
+                WorkoutStage(name: "Разминка", duration: 300, speed: "5.0", type: .warmup),
+                WorkoutStage(name: "Бег", duration: 60, speed: "6.5", type: .run),
+                WorkoutStage(name: "Ходьба", duration: 120, speed: "5.0", type: .walk),
+                WorkoutStage(name: "Заминка", duration: 300, speed: "4.5", type: .cooldown)
+            ]
+        } else {
+            stages = [
+                WorkoutStage(name: "Warmup", duration: 300, speed: "5.0", type: .warmup),
+                WorkoutStage(name: "Run", duration: 60, speed: "6.5", type: .run),
+                WorkoutStage(name: "Walk", duration: 120, speed: "5.0", type: .walk),
+                WorkoutStage(name: "Cooldown", duration: 300, speed: "4.5", type: .cooldown)
+            ]
+        }
+        reset()
+    }
+    
+    func t(_ ru: String, _ en: String) -> String {
+        language == .russian ? ru : en
+    }
     
     func start() {
         if stages.isEmpty { return }
@@ -169,13 +199,13 @@ struct ContentView: View {
                             
                             // Сама навигация
                             HStack(spacing: 0) {
-                                NavButton(title: "План", icon: "list.bullet.rectangle.portrait", isSelected: selectedTab == 0) {
+                                NavButton(title: manager.t("План", "Plan"), icon: "list.bullet.rectangle.portrait", isSelected: selectedTab == 0) {
                                     withAnimation(.spring(response: 0.4, dampingFraction: 0.7, blendDuration: 0)) {
                                         selectedTab = 0
                                     }
                                 }
                                 
-                                NavButton(title: "Таймер", icon: "timer", isSelected: selectedTab == 1) {
+                                NavButton(title: manager.t("Таймер", "Timer"), icon: "timer", isSelected: selectedTab == 1) {
                                     withAnimation(.spring(response: 0.4, dampingFraction: 0.7, blendDuration: 0)) {
                                         selectedTab = 1
                                     }
@@ -247,21 +277,21 @@ struct TimerView: View {
                 Spacer()
                 
                 if manager.stages.isEmpty {
-                    Text("Добавьте этапы в плане")
+                    Text(manager.t("Добавьте этапы в плане", "Add stages in Plan"))
                         .foregroundColor(.secondary)
                 } else if manager.isFinished {
                     VStack(spacing: 20) {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 80))
                             .foregroundColor(.green)
-                        Text("ГОТОВО!").bold()
+                        Text(manager.t("ГОТОВО!", "DONE!")).bold()
                             .font(.largeTitle)
                     }
                 } else {
                     let stage = manager.stages[min(manager.currentStageIndex, manager.stages.count - 1)]
                     
                     VStack(spacing: 8) {
-                        Text(stage.type.label).bold()
+                        Text(stage.type.label(for: manager.language)).bold()
                             .font(.caption)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 4)
@@ -279,7 +309,7 @@ struct TimerView: View {
                     
                     HStack {
                         Image(systemName: "figure.walk")
-                        Text("\(stage.speed) КМ/Ч").bold()
+                        Text("\(stage.speed) " + manager.t("КМ/Ч", "KM/H")).bold()
                     }
                     .font(.title)
                     .foregroundColor(.secondary)
@@ -317,7 +347,7 @@ struct TimerView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "arrow.counterclockwise")
                             .font(.system(size: 14, weight: .bold))
-                        Text("Сброс")
+                        Text(manager.t("Сброс", "Reset"))
                             .font(.system(size: 14, weight: .bold))
                     }
                     .padding(.horizontal, 16)
@@ -336,7 +366,7 @@ struct TimerView: View {
                 
                 Spacer()
                 
-                Button(action: { /* Настройки */ }) {
+                Button(action: { manager.showingSettings = true }) {
                     Image(systemName: "gearshape.fill")
                         .font(.system(size: 18, weight: .bold))
                         .padding(12)
@@ -354,6 +384,9 @@ struct TimerView: View {
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
+        }
+        .sheet(isPresented: $manager.showingSettings) {
+            SettingsView(manager: manager)
         }
     }
     
@@ -378,7 +411,7 @@ struct BuilderView: View {
                                 Text(stage.name)
                                     .font(.headline)
                                     .foregroundColor(.primary)
-                                Text("\(stage.duration / 60) мин • \(stage.speed) км/ч")
+                                Text("\(stage.duration / 60) " + manager.t("мин", "min") + " • \(stage.speed) " + manager.t("км/ч", "km/h"))
                                     .font(.subheadline).foregroundColor(.secondary)
                             }
                         }
@@ -394,11 +427,11 @@ struct BuilderView: View {
                             Image(systemName: "drop.fill")
                                 .foregroundColor(.blue)
                                 .font(.title2)
-                            Text("Пейте воду").bold()
+                            Text(manager.t("Пейте воду", "Drink Water")).bold()
                                 .font(.headline)
                         }
                         
-                        Text("Не забывайте пить небольшими глотками за 15-20 минут до начала и во время тренировки, чтобы избежать обезвоживания.")
+                        Text(manager.t("Не забывайте пить небольшими глотками за 15-20 минут до начала и во время тренировки, чтобы избежать обезвоживания.", "Don't forget to drink in small sips 15-20 minutes before and during your workout to avoid dehydration."))
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -406,13 +439,13 @@ struct BuilderView: View {
                     .padding(.vertical, 8)
                 }
             }
-            .navigationTitle("Тренировка")
+            .navigationTitle(manager.t("Тренировка", "Workout"))
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { /* Пустышка */ }) {
                         HStack {
                             Image(systemName: "sparkles")
-                            Text("Попросить ИИ").bold()
+                            Text(manager.t("Попросить ИИ", "Ask AI")).bold()
                         }
                         .font(.caption)
                         .foregroundColor(.primary)
@@ -433,6 +466,53 @@ struct BuilderView: View {
             .sheet(item: $manager.editingStage) { stage in
                 StageEditorView(manager: manager, stageToEdit: stage)
             }
+        }
+    }
+}
+
+struct SettingsView: View {
+    @Environment(\.presentationMode) var presentationMode
+    @ObservedObject var manager: WorkoutManager
+    
+    var body: some View {
+        NavigationView {
+            List {
+                Section(header: Text(manager.t("ЯЗЫК", "LANGUAGE"))) {
+                    Button(action: {
+                        manager.language = .russian
+                        manager.setupDefaultStages()
+                    }) {
+                        HStack {
+                            Text("Русский")
+                            Spacer()
+                            if manager.language == .russian {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                    .foregroundColor(.primary)
+                    
+                    Button(action: {
+                        manager.language = .english
+                        manager.setupDefaultStages()
+                    }) {
+                        HStack {
+                            Text("English")
+                            Spacer()
+                            if manager.language == .english {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                    .foregroundColor(.primary)
+                }
+            }
+            .navigationTitle(manager.t("Настройки", "Settings"))
+            .navigationBarItems(trailing: Button(manager.t("Готово", "Done")) {
+                presentationMode.wrappedValue.dismiss()
+            })
         }
     }
 }
@@ -461,22 +541,22 @@ struct StageEditorView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("ОСНОВНОЕ")) {
-                    TextField("Название", text: $name)
+                Section(header: Text(manager.t("ОСНОВНОЕ", "GENERAL"))) {
+                    TextField(manager.t("Название", "Name"), text: $name)
                     
-                    Picker("Тип", selection: $type) {
-                        Text("Подготовка").tag(StageType.warmup)
-                        Text("Интенсив").tag(StageType.run)
-                        Text("Отдых").tag(StageType.walk)
-                        Text("Заминка").tag(StageType.cooldown)
+                    Picker(manager.t("Тип", "Type"), selection: $type) {
+                        Text(manager.t("Подготовка", "Warmup")).tag(StageType.warmup)
+                        Text(manager.t("Интенсив", "Intense")).tag(StageType.run)
+                        Text(manager.t("Отдых", "Rest")).tag(StageType.walk)
+                        Text(manager.t("Заминка", "Cooldown")).tag(StageType.cooldown)
                     }
                 }
                 
-                Section(header: Text("ПАРАМЕТРЫ")) {
-                    Stepper("Длительность: \(minutes) мин", value: $minutes, in: 1...60)
+                Section(header: Text(manager.t("ПАРАМЕТРЫ", "PARAMETERS"))) {
+                    Stepper(manager.t("Длительность: \(minutes) мин", "Duration: \(minutes) min"), value: $minutes, in: 1...60)
                     
                     HStack {
-                        Text("Скорость (км/ч)")
+                        Text(manager.t("Скорость (км/ч)", "Speed (km/h)"))
                         Spacer()
                         TextField("5.0", text: $speed)
                             .multilineTextAlignment(.trailing)
@@ -484,9 +564,9 @@ struct StageEditorView: View {
                     }
                 }
             }
-            .navigationTitle(stageToEdit == nil ? "Добавить" : "Изменить")
+            .navigationTitle(stageToEdit == nil ? manager.t("Добавить", "Add") : manager.t("Изменить", "Edit"))
             .navigationBarItems(
-                leading: Button("Отмена") {
+                leading: Button(manager.t("Отмена", "Cancel")) {
                     presentationMode.wrappedValue.dismiss()
                 },
                 trailing: Button(action: {
@@ -505,7 +585,7 @@ struct StageEditorView: View {
                     }
                     presentationMode.wrappedValue.dismiss()
                 }) {
-                    Text("Готово").bold()
+                    Text(manager.t("Готово", "Done")).bold()
                 }
             )
         }
