@@ -303,34 +303,49 @@ struct TimerView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             
-            // Кнопки управления сверху (Liquid Glass)
+            // Кнопки управления сверху (Liquid Glass iOS 26)
             HStack {
                 Button(action: manager.reset) {
                     HStack(spacing: 6) {
                         Image(systemName: "arrow.counterclockwise")
-                        Text("Сброс").bold()
+                            .font(.system(size: 14, weight: .bold))
+                        Text("Сброс")
+                            .font(.system(size: 14, weight: .bold))
                     }
-                    .font(.footnote)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(10)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(.ultraThinMaterial)
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                        }
+                    )
                 }
-                .foregroundColor(.primary)
+                .foregroundColor(.white)
+                .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
                 
                 Spacer()
                 
-                Button(action: { /* Звук */ }) {
-                    Image(systemName: "speaker.wave.2.fill")
-                        .font(.footnote)
-                        .padding(10)
-                        .background(.ultraThinMaterial)
-                        .cornerRadius(10)
+                Button(action: { /* Настройки */ }) {
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 18, weight: .bold))
+                        .padding(12)
+                        .background(
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(.ultraThinMaterial)
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                            }
+                        )
                 }
-                .foregroundColor(.primary)
+                .foregroundColor(.white)
+                .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
             }
-            .padding(.horizontal)
-            .padding(.top, 10)
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
         }
     }
     
