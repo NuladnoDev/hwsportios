@@ -176,96 +176,56 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             
-            // Кастомная навигация (Telegram-style Liquid Blob)
-            ZStack {
-                // Основная панель (Glass)
-                HStack(spacing: 0) {
-                    GeometryReader { proxy in
-                        let width = proxy.size.width / 2
-                        
-                        ZStack(alignment: .leading) {
-                            // Жидкий индикатор (Blob/Drop)
-                            Capsule()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [.blue.opacity(0.3), .blue.opacity(0.15)],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    )
-                                )
-                                .frame(width: width - 12, height: 44)
-                                .offset(x: selectedTab == 0 ? 6 : width + 6)
-                                .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
+            // Новая навигация в стиле Telegram (Liquid Glass iOS 16+)
+            HStack(spacing: 0) {
+                ForEach(0..<2) { index in
+                    let isSelected = selectedTab == index
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            selectedTab = index
+                        }
+                    } label: {
+                        VStack(spacing: 4) {
+                            Image(systemName: index == 0 ? (isSelected ? "list.bullet.rectangle.portrait.fill" : "list.bullet.rectangle.portrait") : (isSelected ? "timer" : "timer"))
+                                .font(.system(size: 20, weight: .semibold))
+                                .symbolRenderingMode(.hierarchical)
+                                .foregroundColor(isSelected ? .blue : .secondary)
                             
-                            // Сама навигация
-                            HStack(spacing: 0) {
-                                NavButton(title: manager.t("План", "Plan"), icon: "list.bullet.rectangle.portrait", isSelected: selectedTab == 0) {
-                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7, blendDuration: 0)) {
-                                        selectedTab = 0
-                                    }
-                                }
-                                
-                                NavButton(title: manager.t("Таймер", "Timer"), icon: "timer", isSelected: selectedTab == 1) {
-                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7, blendDuration: 0)) {
-                                        selectedTab = 1
-                                    }
-                                }
+                            Text(index == 0 ? manager.t("План", "Plan") : manager.t("Таймер", "Timer"))
+                                .font(.system(size: 11, weight: isSelected ? .bold : .medium))
+                                .foregroundColor(isSelected ? .blue : .secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background {
+                            if isSelected {
+                                Capsule()
+                                    .fill(Color.blue.opacity(0.12))
+                                    .matchedGeometryEffect(id: "TAB_BLOB", in: animation)
+                                    .frame(width: 80, height: 50)
                             }
                         }
                     }
                 }
-                .frame(width: 240, height: 60)
-                .background(
-                    ZStack {
-                        // Glass background
-                        RoundedRectangle(cornerRadius: 30, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                        
-                        // Inner glow
-                        RoundedRectangle(cornerRadius: 30, style: .continuous)
-                            .stroke(
-                                LinearGradient(
-                                    colors: [.white.opacity(0.25), .clear, .white.opacity(0.05)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1
-                            )
-                    }
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
-                .shadow(color: .black.opacity(0.2), radius: 15, x: 0, y: 8)
             }
-            .padding(.bottom, 24)
+            .padding(.horizontal, 15)
+            .background {
+                Capsule()
+                    .fill(.ultraThinMaterial)
+                    .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 10)
+                    .overlay {
+                        Capsule()
+                            .stroke(LinearGradient(colors: [.white.opacity(0.2), .clear], startPoint: .top, endPoint: .bottom), lineWidth: 0.5)
+                    }
+            }
+            .padding(.horizontal, 50)
+            .padding(.bottom, 20)
         }
         .preferredColorScheme(.dark)
     }
 }
 
-struct NavButton: View {
-    let title: String
-    let icon: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 4) {
-                Image(systemName: isSelected ? icon + ".fill" : icon)
-                    .font(.system(size: 20, weight: isSelected ? .bold : .medium))
-                    .symbolRenderingMode(.hierarchical)
-                    .scaleEffect(isSelected ? 1.1 : 1.0)
-                
-                Text(title)
-                    .font(.system(size: 11, weight: isSelected ? .bold : .medium))
-            }
-            .foregroundColor(isSelected ? .blue : .white.opacity(0.5))
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
+// Удаляем старый NavButton, так как логика теперь внутри ForEach
 
 struct TimerView: View {
     @ObservedObject var manager: WorkoutManager
