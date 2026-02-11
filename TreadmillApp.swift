@@ -231,6 +231,10 @@ struct ContentView: View {
     @Namespace private var animation
     @Environment(\.scenePhase) var scenePhase
     
+    // Для жеста перетаскивания капли
+    @State private var dragOffset: CGFloat = 0
+    @State private var isDragging = false
+    
     var body: some View {
         ZStack(alignment: .bottom) {
             // Контент
@@ -244,14 +248,14 @@ struct ContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             
             // Новая навигация в стиле Telegram (Liquid Glass iOS 16+)
-            HStack(spacing: 0) {
-                ForEach(0..<2) { index in
-                    let isSelected = selectedTab == index
-                    Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedTab = index
-                        }
-                    } label: {
+            GeometryReader { proxy in
+                let totalWidth = proxy.size.width - 100 // Учитываем padding горизонтальный
+                let tabWidth = totalWidth / 2
+                
+                HStack(spacing: 0) {
+                    ForEach(0..<2) { index in
+                        let isSelected = selectedTab == index
+                        
                         VStack(spacing: 4) {
                             Image(systemName: index == 0 ? (isSelected ? "list.bullet.rectangle.portrait.fill" : "list.bullet.rectangle.portrait") : (isSelected ? "timer" : "timer"))
                                 .font(.system(size: 20, weight: .semibold))
@@ -264,29 +268,73 @@ struct ContentView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .background {
-                            if isSelected {
-                                Capsule()
-                                    .fill(Color.blue.opacity(0.12))
-                                    .matchedGeometryEffect(id: "TAB_BLOB", in: animation)
-                                    .frame(width: 80, height: 50)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                selectedTab = index
+                                hapticFeedback()
                             }
                         }
                     }
                 }
-            }
-            .padding(.horizontal, 15)
-            .background {
-                Capsule()
-                    .fill(.ultraThinMaterial)
-                    .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 10)
-                    .overlay {
+                .background {
+                    // Та самая «жидкая» капля с материалом
+                    ZStack {
                         Capsule()
-                            .stroke(LinearGradient(colors: [.white.opacity(0.2), .clear], startPoint: .top, endPoint: .bottom), lineWidth: 0.5)
+                            .fill(.ultraThinMaterial)
+                            .environment(\.colorScheme, .light) // Делаем каплю светлее для контраста
+                            .overlay {
+                                Capsule()
+                                    .stroke(Color.white.opacity(0.5), lineWidth: 0.5)
+                            }
+                            .shadow(color: .blue.opacity(isDragging ? 0.4 : 0.2), radius: isDragging ? 15 : 10)
+                        
+                        // Синий оттенок внутри стекла
+                        Capsule()
+                            .fill(Color.blue.opacity(0.15))
                     }
+                    .frame(width: tabWidth - 10, height: 50)
+                    // Позиционирование капли
+                    .offset(x: (CGFloat(selectedTab) * tabWidth) + 5 + dragOffset)
+                    .gesture(
+                        DragGesture()
+                            .onChanged { value in
+                                isDragging = true
+                                // Ограничиваем движение капли
+                                let translation = value.translation.width
+                                if selectedTab == 0 {
+                                    dragOffset = max(0, min(translation, tabWidth))
+                                } else {
+                                    dragOffset = min(0, max(translation, -tabWidth))
+                                }
+                            }
+                            .onEnded { value in
+                                let threshold = tabWidth / 2
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    if abs(dragOffset) > threshold {
+                                        selectedTab = selectedTab == 0 ? 1 : 0
+                                        hapticFeedback()
+                                    }
+                                    dragOffset = 0
+                                    isDragging = false
+                                }
+                            }
+                    )
+                }
+                .padding(.horizontal, 5)
+                .background {
+                    Capsule()
+                        .fill(.ultraThinMaterial)
+                        .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 10)
+                        .overlay {
+                            Capsule()
+                                .stroke(LinearGradient(colors: [.white.opacity(0.2), .clear], startPoint: .top, endPoint: .bottom), lineWidth: 0.5)
+                        }
+                }
+                .frame(width: totalWidth, height: 60)
+                .position(x: proxy.size.width / 2, y: proxy.size.height - 50)
             }
-            .padding(.horizontal, 50)
-            .padding(.bottom, 20)
+            .frame(height: 100)
         }
         .preferredColorScheme(.dark)
         .onChange(of: scenePhase) { newPhase in
@@ -296,6 +344,11 @@ struct ContentView: View {
                 manager.appWillEnterForeground()
             }
         }
+    }
+    
+    private func hapticFeedback() {
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.impactOccurred()
     }
 }
 
